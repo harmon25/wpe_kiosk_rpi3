@@ -14,27 +14,21 @@ config BR2_PACKAGE_WPEWEBKIT_RDK_ARCH_SUPPORTS
 
 comment "wpewebkit needs a glibc toolchain w/ C++, OpenGL backend, gcc >= 6, host gcc >= 4.8"
 	depends on BR2_PACKAGE_WPEWEBKIT_RDK_ARCH_SUPPORTS
-	depends on !BR2_BINFMT_FLAT
-	depends on !BR2_INSTALL_LIBSTDCPP || !BR2_USE_WCHAR \
-		|| !BR2_TOOLCHAIN_HAS_THREADS || BR2_STATIC_LIBS \
-		|| !BR2_TOOLCHAIN_GCC_AT_LEAST_7
-
-comment "wpewebkit needs an OpenGL ES w/ EGL-capable Wayland backend"
-	depends on BR2_PACKAGE_WPEWEBKIT_RDK_ARCH_SUPPORTS
-	depends on !BR2_BINFMT_FLAT
-	depends on !BR2_PACKAGE_HAS_LIBGLES || !BR2_PACKAGE_HAS_LIBEGL \
-		|| !BR2_PACKAGE_HAS_LIBEGL_WAYLAND
-
+	depends on !BR2_INSTALL_LIBSTDCPP || \
+		!BR2_TOOLCHAIN_USES_GLIBC || \
+		!BR2_HOST_GCC_AT_LEAST_4_8 || \
+		!BR2_TOOLCHAIN_GCC_AT_LEAST_6 || \
+		!BR2_PACKAGE_HAS_LIBEGL || \
+		!BR2_PACKAGE_HAS_LIBGLES
+	depends on BR2_USE_MMU
 
 config BR2_PACKAGE_WPEWEBKIT_RDK
 	bool "wpewebkit-rdk"
 	depends on BR2_INSTALL_LIBSTDCPP
-    depends on !BR2_BINFMT_FLAT # icu
-	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_7
-    depends on BR2_USE_WCHAR # icu, libsoup
+	depends on BR2_HOST_GCC_AT_LEAST_4_8 # icu
+	depends on BR2_TOOLCHAIN_GCC_AT_LEAST_6
+	depends on BR2_TOOLCHAIN_USES_GLIBC
 	depends on BR2_PACKAGE_WPEWEBKIT_RDK_ARCH_SUPPORTS
-	depends on BR2_TOOLCHAIN_HAS_THREADS # wayland, icu, libsoup
-	depends on BR2_PACKAGE_HAS_LIBGLES # libepoxy
 	depends on BR2_PACKAGE_HAS_LIBEGL # libepoxy
 	select BR2_PACKAGE_CAIRO
 	select BR2_PACKAGE_CAIRO_PNG
@@ -45,15 +39,12 @@ config BR2_PACKAGE_WPEWEBKIT_RDK
 	select BR2_PACKAGE_LIBGCRYPT
 	select BR2_PACKAGE_LIBPNG
 	select BR2_PACKAGE_LIBSOUP
-	select BR2_PACKAGE_LIBTASN1
-	select BR2_PACKAGE_LIBXSLT
-	select BR2_PACKAGE_OPENJPEG
+	select BR2_PACKAGE_LIBWPE_RDK
+	select BR2_PACKAGE_LIBXML2
 	select BR2_PACKAGE_SQLITE
 	select BR2_PACKAGE_WEBP
 	select BR2_PACKAGE_WEBP_DEMUX
 	select BR2_PACKAGE_WOFF2
-	select BR2_PACKAGE_WPEBACKEND_RDK
-
 	help
 	  WebKit is an open source, standards compliant web browser
 	  engine. The WPE port is specifically aimed towards usage in
@@ -61,30 +52,67 @@ config BR2_PACKAGE_WPEWEBKIT_RDK
 
 	  http://wpewebkit.org/
 
-
 if BR2_PACKAGE_WPEWEBKIT_RDK
 
-config BR2_PACKAGE_WPEWEBKIT_RDK_SANDBOX
-	bool "sandboxing support"
-	depends on BR2_PACKAGE_LIBSECCOMP_ARCH_SUPPORTS # libseccomp
-	depends on BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_12 # libseccomp
-	select BR2_PACKAGE_BUBBLEWRAP # runtime
-	select BR2_PACKAGE_XDG_DBUS_PROXY # runtime
-	select BR2_PACKAGE_LIBSECCOMP
+config BR2_PACKAGE_WPEWEBKIT_RDK_MINIBROWSER
+	bool "MiniBrowser"
+	depends on BR2_PACKAGE_WPEBACKEND_FDO || BR2_PACKAGE_WPEBACKEND_RDK
 	help
-	  Enable sandboxing of the processes used for network operation,
-	  disk asccess, and Web content rendering.
+	  Use MiniBrowser as WPE launcher.
 
-comment "sandboxing supports needs a toolchain w/ headers >= 3.12"
-	depends on BR2_PACKAGE_LIBSECCOMP_ARCH_SUPPORTS
-	depends on !BR2_TOOLCHAIN_HEADERS_AT_LEAST_3_12
+comment "MiniBrowser needs a WPEBackend"
+	depends on !BR2_PACKAGE_WPEBACKEND_FDO && !BR2_PACKAGE_WPEBACKEND_RDK
+
+if BR2_PACKAGE_WPEWEBKIT_RDK_MINIBROWSER
+
+choice
+	prompt "Backend Type"
+	default BR2_PACKAGE_WPEWEBKIT_RDK_MINIBROWSER_BACKEND_DEFAULT
+
+config BR2_PACKAGE_WPEWEBKIT_RDK_MINIBROWSER_BACKEND_DEFAULT
+	bool "Default WPE Backend"
+	help
+	  MiniBrowser will use default WPE backend.
+
+config BR2_PACKAGE_WPEWEBKIT_RDK_MINIBROWSER_BACKEND_FDO
+	bool "FDO Backend"
+	depends on BR2_PACKAGE_WPEBACKEND_FDO && BR2_PACKAGE_WAYLAND && BR2_PACKAGE_MESA3D_OPENGL_EGL
+	help
+	  MiniBrowser will use FDO backend.
+
+endchoice
+
+comment "FDO backend needs OpenGL implementation like MESA3D which supports WAYLAND EGL "
+	depends on !BR2_PACKAGE_MESA3D_OPENGL_EGL
+
+endif
+
+config BR2_PACKAGE_WPEWEBKIT_RDK_BUILD_JSC
+	bool "build jsc"
+	help
+	  Builds and install the "jsc" interactive JavaScript shell.
+
+config BR2_PACKAGE_WPEWEBKIT_RDK_HTTPS
+	bool "HTTPS support"
+	default y
+	depends on !BR2_STATIC_LIBS # gnutls -> libsoup
+	select BR2_PACKAGE_CA_CERTIFICATES # runtime
+	select BR2_PACKAGE_LIBSOUP_SSL
+	help
+	  Enable HTTP protocol support.
+
+comment "wpewebkit https support needs a toolchain w/ dynamic library"
+	depends on BR2_STATIC_LIBS
 
 config BR2_PACKAGE_WPEWEBKIT_RDK_MULTIMEDIA
 	bool "multimedia support"
 	select BR2_PACKAGE_GSTREAMER1
 	select BR2_PACKAGE_GST1_PLUGINS_BAD
+	select BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_GL if BR2_PACKAGE_HAS_LIBEGL || BR2_PACKAGE_HAS_LIBGL
 	select BR2_PACKAGE_GST1_PLUGINS_BAD_PLUGIN_MPEGTSDEMUX
+	select BR2_PACKAGE_GST1_PLUGINS_BAD_LIB_OPENGL if BR2_PACKAGE_HAS_LIBEGL || BR2_PACKAGE_HAS_LIBGL
 	select BR2_PACKAGE_GST1_PLUGINS_BASE
+	select BR2_PACKAGE_GST1_PLUGINS_BASE_LIB_OPENGL if BR2_PACKAGE_HAS_LIBGL || BR2_PACKAGE_HAS_LIBGLES
 	select BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_ALSA
 	select BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_APP
 	select BR2_PACKAGE_GST1_PLUGINS_BASE_PLUGIN_AUDIOCONVERT
@@ -103,26 +131,26 @@ config BR2_PACKAGE_WPEWEBKIT_RDK_MULTIMEDIA
 	  This option pulls in all of the required dependencies
 	  to enable multimedia (video/audio) support.
 
-if BR2_PACKAGE_WPEWEBKIT_RDK_MULTIMEDIA
-
-config BR2_PACKAGE_WPEWEBKIT_RDK_USE_GSTREAMER_GL
-	bool "use gstreamer-gl"
+config BR2_PACKAGE_WPEWEBKIT_RDK_WEBCRYPTO
+	bool "WebCrypto support"
 	default y
-	depends on BR2_PACKAGE_GST1_PLUGINS_BASE_LIB_OPENGL_OPENGL
+	select BR2_PACKAGE_LIBTASN1
 	help
-	  Use the GStreamer GL elements for handling video content.
-	  This is recommended as it improves performance of video
-	  playback. In some target configurations incorrect rendering
-	  might be produced, and disabling this option may help.
-
-endif
+	  Enable support for the WebCrypto API. This will add libtasn1
+	  as a dependency.
 
 config BR2_PACKAGE_WPEWEBKIT_RDK_WEBDRIVER
 	bool "WebDriver support"
+	default y
 	help
 	  Enable support for WebDriver. This will build and install the
 	  WebKitWebDriver program in the target.
 
+config BR2_PACKAGE_WPEWEBKIT_RDK_XSLT
+	bool "XSLT support"
+	default y
+	select BR2_PACKAGE_LIBXSLT
+	help
+	  Enable support for XSLT. This adds libxslt2 as a dependecy.
+
 endif
-
-

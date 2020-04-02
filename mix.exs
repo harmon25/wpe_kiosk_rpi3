@@ -35,7 +35,7 @@ defmodule NervesSystemRpi3.MixProject do
     [
       type: :system,
       artifact_sites: [
-        {:github_releases, "elcritch/#{@app}"}
+        {:github_releases, "harmon25/#{@app}"}
       ],
       build_runner_opts: build_runner_opts(),
       platform: Nerves.System.BR,
@@ -48,9 +48,9 @@ defmodule NervesSystemRpi3.MixProject do
 
   defp deps do
     [
-      {:nerves, "~> 1.5", runtime: false},
-      {:nerves_system_br, "1.8.5", runtime: false},
-      {:nerves_toolchain_arm_unknown_linux_gnueabihf, "1.2.0", runtime: false},
+      {:nerves, "~> 1.5.4 or ~> 1.6.0", runtime: false},
+      {:nerves_system_br, "1.11.0", runtime: false},
+      {:nerves_toolchain_arm_unknown_linux_gnueabihf, "~> 1.3.0", runtime: false},
       {:nerves_system_linter, "~> 0.3.0", runtime: false},
       {:ex_doc, "~> 0.18", only: [:dev, :test], runtime: false}
     ]
@@ -58,7 +58,7 @@ defmodule NervesSystemRpi3.MixProject do
 
   defp description do
     """
-    Nerves System - Raspberry Pi 3 B / B+
+    Nerves System - Raspberry Pi 3 B / B+ - WPE
     """
   end
 

@@ -1,20 +1,42 @@
+comment "cog needs wpewebkit and a toolchain w/ threads"
+	depends on BR2_USE_MMU
+	depends on !BR2_PACKAGE_WPEWEBKIT_RDK || !BR2_TOOLCHAIN_HAS_THREADS
+
 config BR2_PACKAGE_COG_RDK
-	bool "cog"
+	bool "cog-rdk"
 	depends on BR2_PACKAGE_WPEWEBKIT_RDK
+	depends on BR2_TOOLCHAIN_HAS_THREADS # dbus
+	depends on BR2_USE_MMU # dbus
+	select BR2_PACKAGE_DBUS
 	help
-	  Single “window” launcher for the WebKit WPE port, and
+	  Single "window" launcher for the WebKit WPE port, and
 	  helper library for implementing WPE launcher. It does
 	  not provide any chrome, and is suitable to be used
 	  as a Web application container.
 
+	  https://github.com/Igalia/cog
+
 if BR2_PACKAGE_COG_RDK
 
-config BR2_PACKAGE_COG_RDK_PROGRAMS
-	bool "build and install programs"
-	help
-	  Build and install the "cog" and "cogctl" programs.
+config BR2_PACKAGE_COG_RDK_PLATFORM_FDO_ARCH_SUPPORTS
+	bool
+	default y
+	depends on BR2_PACKAGE_HAS_LIBEGL_WAYLAND
+	depends on BR2_PACKAGE_HAS_LIBGLES
+	depends on BR2_PACKAGE_WPEBACKEND_FDO
 
-if BR2_PACKAGE_COG_RDK_PROGRAMS
+comment "cog fdo platform plugin requires egl, gles, wayland"
+	depends on !BR2_PACKAGE_COG_PLATFORM_FDO_ARCH_SUPPORTS
+
+
+config BR2_PACKAGE_COG_RDK_PLATFORM_FDO
+	bool "fdo platform"
+	depends on BR2_PACKAGE_COG_PLATFORM_FDO_ARCH_SUPPORTS
+	help
+	  Support platform plug-in which uses FreeDesktop.Org's
+	  technologies for windowing. Choose this to support output
+	  to Wayland compositor.
+
 
 config BR2_PACKAGE_COG_RDK_PROGRAMS_DBUS_SYSTEM_BUS
 	bool "expose remote control interface on system bus"
@@ -22,9 +44,10 @@ config BR2_PACKAGE_COG_RDK_PROGRAMS_DBUS_SYSTEM_BUS
 	  If enabled, the D-Bus remote control interface is exposed
 	  on the system bus, instead of the session bus.
 
+
 config BR2_PACKAGE_COG_RDK_PROGRAMS_HOME_URI
 	string "home uri"
-	default ""
+	default "https://wpewebkit.org"
 	help
 	  Default URI to open when "cog" is launched. If an empty
 	  string is used, there is no default and the URI to open
@@ -32,4 +55,4 @@ config BR2_PACKAGE_COG_RDK_PROGRAMS_HOME_URI
 
 endif
 
-endif
+
